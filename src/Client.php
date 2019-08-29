@@ -2,12 +2,16 @@
 
 namespace Balfour\DomainsResellerAPI;
 
+use Badcow\DNS\Parser\Parser as ZoneParser;
+use Badcow\DNS\ResourceRecord;
+use Badcow\DNS\Zone;
 use Balfour\DomainsResellerAPI\Responses\CancelDomainDeleteResponse;
 use Balfour\DomainsResellerAPI\Responses\CancelDomainTransferResponse;
 use Balfour\DomainsResellerAPI\Responses\CancelDomainUpdateResponse;
 use Balfour\DomainsResellerAPI\Responses\CheckDomainTransferResponse;
 use Balfour\DomainsResellerAPI\Responses\CheckMultipleTLDAvailabilityResponse;
 use Balfour\DomainsResellerAPI\Responses\DeleteDomainResponse;
+use Balfour\DomainsResellerAPI\Responses\DNSRecordsResponse;
 use Balfour\DomainsResellerAPI\Responses\DomainEPPKeyResponse;
 use Balfour\DomainsResellerAPI\Responses\DomainInfoResponse;
 use Balfour\DomainsResellerAPI\Responses\DomainListingResponse;
@@ -17,6 +21,7 @@ use Balfour\DomainsResellerAPI\Responses\RenewDomainResponse;
 use Balfour\DomainsResellerAPI\Responses\SetDomainAutoRenewResponse;
 use Balfour\DomainsResellerAPI\Responses\SuspendDomainResponse;
 use Balfour\DomainsResellerAPI\Responses\UnsuspendDomainResponse;
+use Balfour\DomainsResellerAPI\Responses\UpdateDNSRecordsResponse;
 use Balfour\DomainsResellerAPI\Responses\UpdateDomainRegistrantResponse;
 use Balfour\DomainsResellerAPI\Responses\UpdateNameserversResponse;
 use Exception;
@@ -151,29 +156,6 @@ class Client
     }
 
     /**
-     * @param string $domain
-     * @return mixed[]
-     * @throws Exception
-     */
-    protected function parseDomain(string $domain): array
-    {
-        // split out sld (second level domain) and tld (top level domain)
-        $p = mb_strpos($domain, '.');
-
-        if ($p === false) {
-            throw new Exception(sprintf('The domain %s does not contain a valid sld and tld.', $domain));
-        }
-
-        $sld = mb_substr($domain, 0, $p);
-        $tld = mb_substr($domain, $p + 1);
-
-        return [
-            'sld' => $sld,
-            'tld' => $tld,
-        ];
-    }
-
-    /**
      * @param string[] $nameservers
      * @return string[]
      */
@@ -231,7 +213,7 @@ class Client
         array $customNameservers = [],
         ?string $externalRef = null
     ): RegisterDomainResponse {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -305,7 +287,7 @@ class Client
      */
     public function isDomainAvailable(string $domain): bool
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -325,7 +307,7 @@ class Client
      */
     public function deleteDomain(string $domain): DeleteDomainResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -366,7 +348,7 @@ class Client
         string $registrantCity,
         string $registrantProvince
     ): UpdateDomainRegistrantResponse {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -422,7 +404,7 @@ class Client
      */
     public function renewDomain(string $domain, int $years = 1): RenewDomainResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -472,7 +454,7 @@ class Client
         array $customNameservers = [],
         ?string $externalRef = null
     ): array {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -544,7 +526,7 @@ class Client
      */
     public function suspendDomain(string $domain): SuspendDomainResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -564,7 +546,7 @@ class Client
      */
     public function unsuspendDomain(string $domain): UnsuspendDomainResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -603,7 +585,7 @@ class Client
      */
     public function getDomain(string $domain): DomainInfoResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -629,7 +611,7 @@ class Client
         bool $useManagedNameservers,
         array $customNameservers
     ): UpdateNameserversResponse {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -655,7 +637,7 @@ class Client
      */
     public function getDomainEPPAuthKey(string $domain): DomainEPPKeyResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -676,7 +658,7 @@ class Client
      */
     public function cancelDomainUpdate(string $domain): CancelDomainUpdateResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -697,7 +679,7 @@ class Client
      */
     public function cancelDomainDelete(string $domain): CancelDomainDeleteResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -719,7 +701,7 @@ class Client
      */
     public function setDomainAutoRenew(string $domain, bool $autorenew): SetDomainAutoRenewResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -763,7 +745,7 @@ class Client
      */
     public function checkDomainTransfer(string $domain): CheckDomainTransferResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -784,7 +766,7 @@ class Client
      */
     public function cancelDomainTransfer(string $domain): CancelDomainTransferResponse
     {
-        $domain = $this->parseDomain($domain);
+        $domain = Utils::parseDomain($domain);
 
         $payload = [
             'sld' => $domain['sld'],
@@ -861,5 +843,89 @@ class Client
         ?string $filter = null
     ): DomainListingResponse {
         return $this->getDomains($limit, $offset, $sort, $dir, $filter, $query);
+    }
+
+    /**
+     * @param string $domain
+     * @return DNSRecordsResponse
+     * @throws APIException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws Exception
+     */
+    public function getDNSRecords(string $domain): DNSRecordsResponse
+    {
+        $domain = Utils::parseDomain($domain);
+
+        $payload = [
+            'sld' => $domain['sld'],
+            'tld' => $domain['tld'],
+        ];
+
+        $response = $this->post('domain/dns/recordList', $payload);
+
+        return new DNSRecordsResponse($response, $domain['fqdn']);
+    }
+
+    /**
+     * @param string $domain
+     * @param ResourceRecord[] $records
+     * @return UpdateDNSRecordsResponse
+     * @throws APIException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws Exception
+     */
+    public function updateDNSRecords(string $domain, array $records): UpdateDNSRecordsResponse
+    {
+        $domain = Utils::parseDomain($domain);
+
+        $records = ResourceRecordParser::fromResourceRecords($records);
+
+        $payload = [
+            'sld' => $domain['sld'],
+            'tld' => $domain['tld'],
+        ];
+
+        // flatten records
+        // eg: $records[0]['name'] => 'value' becomes name0 => 'value'
+        foreach ($records as $n => $record) {
+            foreach (array_keys($record) as $key) {
+                $payload[$key . ($n + 1)] = $record[$key];
+            }
+        }
+
+        $response = $this->post('domain/dns/updateRecords', $payload);
+
+        return new UpdateDNSRecordsResponse($response);
+    }
+
+    /**
+     * @param Zone $zone
+     * @return UpdateDNSRecordsResponse
+     * @throws APIException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function updateDNSRecordsFromZone(Zone $zone): UpdateDNSRecordsResponse
+    {
+        $domain = Utils::transformZoneToDomain($zone->getName());
+
+        return $this->updateDNSRecords($domain, $zone->getResourceRecords());
+    }
+
+    /**
+     * @param string $domain
+     * @param string $filename
+     * @return UpdateDNSRecordsResponse
+     * @throws APIException
+     * @throws \Badcow\DNS\Parser\ParseException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function updateDNSRecordsFromZoneFile(string $domain, string $filename): UpdateDNSRecordsResponse
+    {
+        $name = Utils::transformDomainToZone($domain);
+
+        $contents = file_get_contents($filename);
+        $zone = ZoneParser::parse($name, $contents);
+
+        return $this->updateDNSRecordsFromZone($zone);
     }
 }

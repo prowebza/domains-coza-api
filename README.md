@@ -29,6 +29,8 @@ An integration with the domains.co.za reseller API.
     * [Retrieve Domain Totals Summary](#retrieve-domain-totals-summary)
     * [List Domains](#list-domains)
     * [Search Domains](#search-domains)
+    * [Retrieve DNS Records](#retrieve-dns-records)
+    * [Update DNS Records](#update-dns-records)
 
 ## Installation
 
@@ -319,4 +321,70 @@ foreach ($response->getDomains() as $domain) {
     var_dump($domain->getName());
     var_dump($domain->getStatus());
 }
+```
+
+### Retrieve DNS Records
+
+```php
+use Badcow\DNS\AlignedBuilder;
+
+$response = $client->getDNSRecords('mydomain.co.za');
+
+var_dump($response->toArray());
+
+foreach ($response->getRecords() as $record) {
+    var_dump($record->getType());
+    var_dump($record->getName());
+    var_dump($record->getContent());
+    var_dump($record->getPriority()); // only applicable to MX records
+    var_dump($record->getTTL());
+}
+
+// filter by type of record
+$records = $response->getRecordsByType('MX');
+
+// the records can be formatted as a zone file
+$zone = $response->getZone();
+echo AlignedBuilder::build($zone);
+```
+
+### Update DNS Records
+
+**Please Note:**
+
+1. The API only supports A, AAAA, CNAME, MX and TXT records.
+1. The zone file is replaced in full upon each update.
+
+```php
+use Badcow\DNS\Rdata\Factory;
+use Badcow\DNS\ResourceRecord;
+
+// this example assumes no existing records
+$a = new ResourceRecord;
+$a->setName('sub.domain');
+$a->setTtl(3600);
+$a->setRdata(Factory::A('127.0.0.1'));
+
+$mx = new ResourceRecord();
+$mx->setName('@');
+$mx->setRdata(Factory::Mx(10, 'mail-gw1.example.net.'));
+
+$response = $client->updateDNSRecords('mydomain.co.za', [$a, $mx]);
+
+// here, we first fetch the existing records, add a new record to the zone, then update passing in the zone
+$response = $client->getDNSRecords('mydomain.co.za');
+$zone = $response->getZone();
+
+$a = new ResourceRecord;
+$a->setName('sub.domain');
+$a->setTtl(3600);
+$a->setRdata(Factory::A('127.0.0.1'));
+
+$zone->addResourceRecord($a);
+
+// notice how we're just passing in a 
+$client->updateDNSRecordsFromZone($zone);
+
+// you can also update the records from a local zone file
+$client->updateDNSRecordsFromZoneFile('mydomain.co.za', '/path/to/zonefile');
 ```

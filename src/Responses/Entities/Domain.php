@@ -52,7 +52,7 @@ class Domain extends BaseEntity
      */
     public function isPremiumDNSEnabled()
     {
-        return $this->attributes['strDns'] === '1';
+        return $this->attributes['strDns'] === 1;
     }
 
     /**

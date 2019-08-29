@@ -11,6 +11,7 @@
     ],
     "require": {
         "php": ">=7.3.0",
+        "badcow/dns": "^2.3",
         "guzzlehttp/guzzle": "^6.3",
         "nesbot/carbon": "^2.0"
     },
