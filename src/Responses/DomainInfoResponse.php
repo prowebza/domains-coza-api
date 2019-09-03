@@ -97,7 +97,7 @@ class DomainInfoResponse extends BaseResponse
      */
     public function isPremiumDNSEnabled()
     {
-        return $this->json['strDns'] === '1';
+        return $this->json['strDns'] === 1;
     }
 
     /**
