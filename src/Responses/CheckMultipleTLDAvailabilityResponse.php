@@ -29,7 +29,7 @@ class CheckMultipleTLDAvailabilityResponse extends BaseResponse
                 'domain' => $sld . '.' . $tld,
                 'is_available' => $availability['isAvailable'] === 'true',
                 'uses_epp_key' => $availability['usesEppKey'] === 'true',
-                'isPremium' => ($availability['isPremium'] ?? 'false') === 'true',
+                'is_premium' => ($availability['isPremium'] ?? 'false') === 'true',
             ];
         }
 
