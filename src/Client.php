@@ -287,16 +287,27 @@ class Client
      */
     public function isDomainAvailable(string $domain): bool
     {
-        $domain = Utils::parseDomain($domain);
+        try {
+            $domain = Utils::parseDomain($domain);
 
-        $payload = [
-            'sld' => $domain['sld'],
-            'tld' => $domain['tld'],
-        ];
+            $payload = [
+                'sld' => $domain['sld'],
+                'tld' => $domain['tld'],
+            ];
 
-        $response = $this->post('domain/domain/check', $payload);
+            $response = $this->post('domain/domain/check', $payload);
 
-        return $response['isAvailable'] === 'true';
+            return $response['isAvailable'] === 'true';
+        } catch (APIException $e) {
+            // return code 0 is not actually an error, it means "not available" or "failed"; which in this case,
+            // means the domain isn't available
+            if ($e->getReturnCode() === 0) {
+                return false;
+            }
+
+            // for everything else, bubble
+            throw $e;
+        }
     }
 
     /**
