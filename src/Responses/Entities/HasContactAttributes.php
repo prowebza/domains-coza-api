@@ -80,9 +80,9 @@ trait HasContactAttributes
     }
 
     /**
-     * @return string|null
+     * @return string
      */
-    public function getCountryCode(): ?string
+    public function getCountryCode(): string
     {
         // handle inconsistency in api
         if (isset($this->attributes['strContactCountry'])) {
